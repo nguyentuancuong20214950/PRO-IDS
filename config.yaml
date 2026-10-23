@@ -1,0 +1,46 @@
+# PRO-IDS testbed — unified configuration
+#
+# All model_path and output paths are resolved relative to the directory
+# containing this file (i.e., the repo root), NOT the current working
+# directory. Services are launched from the repo root.
+
+# --- M5 edge service ---
+edge:
+  host: "127.0.0.1"                       # bind locally; orchestrator is co-located
+  port: 8001                              # must differ from cloud.port
+  model_path: "models/AD1_int5.npz"
+  num_threads: 1
+
+# --- M5 cloud service ---
+cloud:
+  host: "0.0.0.0"                         # bind all interfaces so edge VM can reach
+  advertised_host: "192.168.56.11"        # the IP clients use to reach this service
+  port: 8002                              # must differ from edge.port
+  model_path: "models/AD1_model.joblib"
+  num_threads: 1
+  trained_sklearn_version: "1.9.1"
+
+# --- M2 telemetry services ---
+# M2 cloud and edge telemetry services use these settings.
+m2:
+  sample_interval_ms: 500
+  ema_beta: 0.3
+  cloud_telemetry_port: 8003              # port on cloud VM
+  edge_state_port: 8004                   # port on edge VM
+  cloud_telemetry_timeout_sec: 1.0
+  output_dir: "results"
+  log_level: "INFO"
+
+# --- Orchestrator ---
+orchestrator:
+  feature_dim: 77
+  policy: "edge-only"                     # "edge-only" | "cloud-only" | "alternate"
+  cloud_timeout_sec: 5.0
+  m2_state_read_timeout_sec: 0.2          # short: M2 is co-located on edge
+  notify_timeout_sec: 0.2                 # short: fire-and-forget
+  progress_log_every_n: 100
+  output_dir: "results"
+
+# --- Global logging ---
+logging:
+  level: "INFO"
