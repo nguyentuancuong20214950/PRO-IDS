@@ -172,7 +172,7 @@ def main() -> int:
         output_dir = (config_path.parent / output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    cloud_timeout = (
+    cloud_timeout_value = (
         args.cloud_timeout
         if args.cloud_timeout is not None
         else float(settings["cloud_timeout_sec"])
@@ -194,7 +194,7 @@ def main() -> int:
     LOG.info("  input: %s", args.input_csv or "synthetic")
     LOG.info("  output_dir: %s", output_dir)
     LOG.info("  run_id: %s", run_id)
-    LOG.info("  cloud_timeout: %ss", cloud_timeout)
+    LOG.info("  cloud_timeout: %ss", cloud_timeout_value)
     LOG.info("  m2_state_read_timeout: %ss", settings["m2_state_read_timeout_sec"])
     LOG.info("  dry_run: %s", args.dry_run)
 
@@ -343,7 +343,7 @@ def main() -> int:
                             timeout = 5.0
                         else:
                             url = f"{cloud_base}/predict"
-                            timeout = cloud_timeout
+                            timeout = cloud_timeout_value
                         response = requests.post(
                             url,
                             json={"request_id": request_id, "x": features_list},

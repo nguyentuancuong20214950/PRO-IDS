@@ -1,5 +1,5 @@
 """PRO-IDS M5 cloud reference service using the sklearn/joblib model."""
-from __future__ import annotations
+
 
 import argparse
 import logging

@@ -1,5 +1,5 @@
 """PRO-IDS M5 edge inference service using the quantized NPZ model."""
-from __future__ import annotations
+
 
 import argparse
 import logging

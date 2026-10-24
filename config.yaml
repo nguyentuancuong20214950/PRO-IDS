@@ -14,7 +14,7 @@ edge:
 # --- M5 cloud service ---
 cloud:
   host: "0.0.0.0"                         # bind all interfaces so edge VM can reach
-  advertised_host: "192.168.56.11"        # the IP clients use to reach this service
+  advertised_host: "192.168.9.11"        # the IP clients use to reach this service
   port: 8002                              # must differ from edge.port
   model_path: "models/AD1_model.joblib"
   num_threads: 1
@@ -34,7 +34,7 @@ m2:
 # --- Orchestrator ---
 orchestrator:
   feature_dim: 77
-  policy: "edge-only"                     # "edge-only" | "cloud-only" | "alternate"
+  policy: "cloud-only"                     # "edge-only" | "cloud-only" | "alternate"
   cloud_timeout_sec: 5.0
   m2_state_read_timeout_sec: 0.2          # short: M2 is co-located on edge
   notify_timeout_sec: 0.2                 # short: fire-and-forget
