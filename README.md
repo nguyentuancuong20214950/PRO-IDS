@@ -143,3 +143,4 @@ Expected results: health endpoints return `status: ok`; state and telemetry endp
 - Adaptive M4 decisions.
 - Deadline enforcement and explicit waiting-queue limits.
 - `netem`, `tcpreplay`, or load generation.
+- M3 predictor maybe more weight and taking longer time to run than detector?
