@@ -367,8 +367,8 @@ def build_parser() -> argparse.ArgumentParser:
     """CLI definition."""
     ap = argparse.ArgumentParser(
         description="Train and calibrate GBM quantile latency predictors (M3) from collect_latency_data.py artifacts.")
-    ap.add_argument("--artifacts-dir", default="M3/artifacts_blocked", help="directory with the .npz files and collect_metadata.json")
-    ap.add_argument("--output-dir", default="M3/models/blocked", help="where models and reports are written")
+    ap.add_argument("--artifacts-dir", default="artifacts/latency/blocked", help="directory with the .npz files and collect_metadata.json")
+    ap.add_argument("--output-dir", default="models/latency/blocked", help="where models and reports are written")
     ap.add_argument("--presets", nargs="+", choices=sorted(PRESETS), default=list(PRESETS), help="GBM presets to train")
     ap.add_argument("--variants", nargs="+", choices=VARIANTS, default=list(VARIANTS), help="feature variants to train")
     ap.add_argument("--p", type=float, default=0.95, help="target quantile level (default 0.95)")

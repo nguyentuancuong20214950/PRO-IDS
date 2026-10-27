@@ -47,7 +47,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 THREAD_ENV_VARS = (
     "OMP_NUM_THREADS",
@@ -186,8 +186,8 @@ def format_warnings(caught):
 
 
 def load_npz_class():
-    """Import NpzMLP from the project-root npz_model.py."""
-    from npz_model import NpzMLP  # noqa: WPS433 - local project module
+    """Import NpzMLP from the project package."""
+    from pro_ids.m5.npz_model import NpzMLP  # noqa: WPS433 - local project module
     return NpzMLP
 
 

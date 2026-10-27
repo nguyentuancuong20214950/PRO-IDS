@@ -5,7 +5,7 @@
 calibration offset eta and the exact feature-column order, and returns the calibrated
 latency quantile  Q_hat = max(0, model.predict(x) + eta)  in milliseconds for M4.
 
-    pred = LatencyPredictor("M3/models/blocked", route="cloud", preset="balanced", variant="no_ui")
+    pred = LatencyPredictor("models/latency/blocked", route="cloud", preset="balanced", variant="no_ui")
     q_hat_ms = pred.predict(s_t, b_i=716.0)
 
 ``s_t`` is the dict served by M2 ``GET /state`` (11 fields). The feature vector is built BY NAME
@@ -25,7 +25,8 @@ Thread safety: no mutable state after construction; predict() may be called conc
 Dependencies: numpy and joblib (scikit-learn is imported by joblib only to unpickle the model;
 load it with the scikit-learn version it was trained with).
 
-Self-test:  python3 latency_predictor.py [models_dir]   (default M3/models/blocked)
+Self-test:  PYTHONPATH=src python3 -m pro_ids.m3.latency.predictor [models_dir]
+            (default models/latency/blocked)
 """
 
 import json
@@ -336,7 +337,7 @@ def main(argv: list | None = None) -> int:
     """CLI: run the self-test; exit code 0 on success, 1 on any failure."""
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
     argv = sys.argv[1:] if argv is None else argv
-    models_dir = argv[0] if argv else "M3/models/blocked"
+    models_dir = argv[0] if argv else "models/latency/blocked"
     try:
         failures = _self_test(models_dir)
     except Exception as exc:  # noqa: BLE001 - any construction error is a failed self-test

@@ -8,7 +8,7 @@
 edge:
   host: "127.0.0.1"                       # bind locally; orchestrator is co-located
   port: 8001                              # must differ from cloud.port
-  model_path: "models/AD1v2_int7.npz"
+  model_path: "models/detector/AD1v2_int7.npz"
   num_threads: 1
 
 # --- M5 cloud service ---
@@ -16,7 +16,7 @@ cloud:
   host: "0.0.0.0"                         # bind all interfaces so edge VM can reach
   advertised_host: "192.168.9.11"        # the IP clients use to reach this service
   port: 8002                              # must differ from edge.port
-  model_path: "models/AD1v2_model.joblib"
+  model_path: "models/detector/AD1v2_model.joblib"
   num_threads: 1
   trained_sklearn_version: "1.9.1"
 

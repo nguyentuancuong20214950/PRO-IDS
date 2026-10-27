@@ -1,4 +1,4 @@
-"""PRO-IDS M5 cloud reference service using the sklearn/joblib model."""
+"""PRO-IDS M5 edge inference service using the quantized NPZ model."""
 
 
 import argparse
@@ -8,12 +8,11 @@ import os
 import sys
 import threading
 import time
-import warnings
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def read_config(filename):
@@ -27,18 +26,17 @@ def read_config(filename):
     if not isinstance(config, dict):
         raise SystemExit("config must be a YAML mapping")
 
-    service = config.get("cloud")
+    service = config.get("edge")
     orchestrator = config.get("orchestrator")
     logging_config = config.get("logging", {})
     if not isinstance(service, dict) or not isinstance(orchestrator, dict):
-        raise SystemExit("config must contain cloud and orchestrator sections")
+        raise SystemExit("config must contain edge and orchestrator sections")
     required = ("host", "port", "model_path", "num_threads")
     for key in required:
         if key not in service:
-            raise SystemExit(f"missing config key: cloud.{key}")
+            raise SystemExit(f"missing config key: edge.{key}")
 
     config = dict(service)
-    config["cloud_model_path"] = config["model_path"]
     config["input_dim"] = orchestrator["feature_dim"]
     config["threshold"] = 0.5
     config["log_level"] = str(logging_config.get("level", "INFO")).upper()
@@ -53,24 +51,24 @@ def read_config(filename):
     if not isinstance(config["threshold"], (int, float)) or not 0 <= config["threshold"] <= 1:
         raise SystemExit("threshold must be between 0 and 1")
 
-    model_path = Path(str(config["cloud_model_path"])).expanduser()
+    model_path = Path(str(config["model_path"])).expanduser()
     if not model_path.is_absolute():
         model_path = (path.parent / model_path).resolve()
-    config["cloud_model_path"] = str(model_path)
+    config["model_path"] = str(model_path)
 
     return config
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PRO-IDS FP32 cloud reference service")
+    parser = argparse.ArgumentParser(description="PRO-IDS quantized edge service")
     parser.add_argument(
         "--config",
-        default=str(Path(__file__).resolve().parent.parent / "config.yaml"),
+        default=str(PROJECT_ROOT / "config.yaml"),
     )
     args = parser.parse_args()
     config = read_config(args.config)
 
-    # Set BLAS/OpenMP limits before importing NumPy and scikit-learn.
+    # Set BLAS/OpenMP limits before importing NumPy or the model module.
     for name in (
         "OMP_NUM_THREADS",
         "MKL_NUM_THREADS",
@@ -79,52 +77,30 @@ def main():
     ):
         os.environ[name] = str(config["num_threads"])
 
-    import joblib
     import numpy as np
-    import sklearn
     import uvicorn
     from fastapi import FastAPI, HTTPException, Request
     from fastapi.responses import JSONResponse
     from pydantic import BaseModel, ConfigDict
 
+    from .npz_model import NpzMLP
+
     logging.basicConfig(
         level=getattr(logging, config["log_level"]),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    logger = logging.getLogger("pro_ids.m5.cloud")
+    logger = logging.getLogger("pro_ids.m5.edge")
 
-    # Capture and log model-version warnings; do not silently discard them.
-    with warnings.catch_warnings(record=True) as captured:
-        warnings.simplefilter("always")
-        model = joblib.load(config["cloud_model_path"])
-
-    load_warnings = [
-        f"{item.category.__name__}: {item.message}"
-        for item in captured
-    ]
-    for message in load_warnings:
-        logger.warning("model load warning: %s", message)
-
-    model_info = {
-        "model_path": config["cloud_model_path"],
-        "model_type": type(model).__name__,
-        "input_dim": config["input_dim"],
-        "sklearn_runtime_version": sklearn.__version__,
-        "load_warnings": load_warnings,
-    }
-    if hasattr(model, "n_features_in_"):
-        model_info["n_features_in"] = int(model.n_features_in_)
-    if hasattr(model, "coefs_"):
-        model_info["coefs_shapes"] = [
-            list(weights.shape) for weights in model.coefs_
-        ]
+    model = NpzMLP(config["model_path"])
+    model.dequantize()
+    model_info = model.info()
 
     class PredictRequest(BaseModel):
         model_config = ConfigDict(extra="forbid")
         request_id: str | None = None
         x: list[float]
 
-    app = FastAPI(title="PRO-IDS M5 Cloud", version="1.0.0")
+    app = FastAPI(title="PRO-IDS M5 Edge", version="1.0.0")
     counts = {
         "requests_total": 0,
         "requests_in_flight": 0,
@@ -169,7 +145,7 @@ def main():
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "service": "cloud", "model_info": model_info}
+        return {"status": "ok", "service": "edge", "model_info": model_info}
 
     @app.get("/metrics")
     def metrics():
@@ -198,14 +174,10 @@ def main():
 
         try:
             row = np.asarray(payload.x, dtype=np.float32).reshape(1, -1)
-            probabilities = np.asarray(model.predict_proba(row))
-            if probabilities.shape != (1, 2) or not np.isfinite(probabilities).all():
-                raise ValueError(
-                    f"model returned invalid probabilities with shape {probabilities.shape}"
-                )
-            classes = list(model.classes_) if hasattr(model, "classes_") else [0, 1]
-            positive_index = classes.index(1) if 1 in classes else 1
-            prob_attack = float(probabilities[0, positive_index])
+            output = np.asarray(model.predict_proba(row))
+            if output.shape != (1, 2) or not np.isfinite(output).all():
+                raise ValueError("model returned invalid output")
+            prob_attack = min(1.0, max(0.0, float(output[0, 1])))
         except Exception as exc:
             logger.exception("inference failed for request_id=%s", payload.request_id)
             raise HTTPException(status_code=500, detail="inference failed") from exc

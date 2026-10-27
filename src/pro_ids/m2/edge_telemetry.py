@@ -51,7 +51,7 @@ Design notes (read before changing anything)
   shared with HTTP handlers. It is never held during HTTP or file I/O.
 
 Smoke test 2 - edge alone (M2-cloud not running):
-    python3 m2_edge_telemetry.py --config config.yaml
+    PYTHONPATH=src python3 -m pro_ids.m2.edge_telemetry --config config.yaml
     curl -s http://127.0.0.1:8004/health | python3 -m json.tool
     curl -s http://127.0.0.1:8004/state  | python3 -m json.tool
   Expect q_e from M5-edge, u_e, cloud_poll_ok=false, h_c_ms=null (stays null).
@@ -86,8 +86,8 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from m2_state import (EMA, RateLimitedWarner, StateVector, append_jsonl, iso_now,
-                      require_keys, utc_stamp)
+from .state import (EMA, RateLimitedWarner, StateVector, append_jsonl, iso_now,
+                    require_keys, utc_stamp)
 
 SERVICE = "m2_edge"
 REQUIRED_KEYS = [

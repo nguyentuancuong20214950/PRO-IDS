@@ -19,14 +19,14 @@ from uuid import uuid4
 import requests
 import yaml
 
-from logging_utils import (
+from pro_ids.common.logging_utils import (
     SUMMARY_FIELDS,
     JsonlWriter,
     SummaryCsvWriter,
     iso_filename_token,
     iso_now,
 )
-from request_source import RequestSource
+from pro_ids.m1.request_source import RequestSource
 
 LOG = logging.getLogger("pro_ids.orchestrator")
 

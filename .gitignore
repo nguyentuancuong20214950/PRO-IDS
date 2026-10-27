@@ -11,9 +11,8 @@ results_backup_*/
 /tmp/orch_*.log
 *.jsonl
 
-# M3 artifacts (.npz — regenerable from JSONL via collect_latency_data.py)
-M3/artifacts_blocked/
-M3/artifacts_random/
+# M3 latency artifacts (.npz — regenerable from JSONL)
+artifacts/latency/
 
 # Data (large CSV — copy via scp instead)
 data/*.csv

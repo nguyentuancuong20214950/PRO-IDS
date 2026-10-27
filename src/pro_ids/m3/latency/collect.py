@@ -42,7 +42,7 @@ where one of the 10 mandatory s_t fields is missing or non-finite. For the cloud
 missing or non-finite ``n_c`` is imputed as 0.0 (it is not used by the edge model).
 
 Example:
-    python3 collect_latency_data.py --results-dir results --output-dir M3/artifacts \\
+    PYTHONPATH=src python3 -m pro_ids.m3.latency.collect --results-dir results --output-dir artifacts/latency/blocked \\
         --p 0.95 --seed 42
 """
 
@@ -584,7 +584,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description="Build M3 latency-predictor datasets (.npz + metadata) from E2 JSONL logs.")
     ap.add_argument("--results-dir", default="results", help="directory with the E2 *.jsonl files")
-    ap.add_argument("--output-dir", default="M3/artifacts", help="where .npz files and metadata go")
+    ap.add_argument("--output-dir", default="artifacts/latency/blocked", help="where .npz files and metadata go")
     ap.add_argument("--p", type=float, default=0.95,
                     help="latency quantile level recorded in the metadata (default 0.95)")
     ap.add_argument("--seed", type=int, default=42, help="seed for MI and the random splits")

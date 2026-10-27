@@ -106,8 +106,8 @@ LOG = logging.getLogger("benchmark_sklearn")
 
 EXPECTED_PARAM_COUNT: dict[str, int] = {"ad1": 3041, "ad3": 214529}
 DEFAULT_MODEL_PATH: dict[str, str] = {
-    "ad1": "models/AD1_model.joblib",
-    "ad3": "models/AD3_model.joblib",
+    "ad1": "models/detector/AD1v2_model.joblib",
+    "ad3": "models/detector/AD3_model.joblib",
 }
 MAX_POOL_ROWS = 100_000
 STAT_KEYS: tuple[str, ...] = ("mean", "std", "min", "max", "p50", "p90", "p95", "p99")
@@ -796,7 +796,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Benchmark sklearn MLPClassifier inference (PRO-IDS AD1/AD3).",
         allow_abbrev=False)
     p.add_argument("--model", choices=["ad1", "ad3"], help="Which model (required unless --self-test).")
-    p.add_argument("--model-path", default=None, help="Path to .joblib (default AD1_model.joblib / AD3_model.joblib).")
+    p.add_argument("--model-path", default=None, help="Path to .joblib (default detector model path for the selected model).")
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--warmup", type=int, default=50)
     p.add_argument("--iterations", type=int, default=1000)

@@ -1,146 +1,169 @@
-# PRO-IDS Edge–Cloud Testbed (Phase B)
+# PRO-IDS Edge–Cloud Testbed
 
-Phase B provides request sourcing, M5 edge/cloud inference, M2 telemetry, and hardcoded routing for E2 plumbing and baseline measurements. M3 risk/latency predictors and adaptive M4 decisions are not implemented. Routing policies are `edge-only`, `cloud-only`, and `alternate`.
+PRO-IDS is a research testbed for edge–cloud network intrusion detection. This repository contains M1 request input, M2 telemetry, M5 edge and cloud inference, a fixed-policy orchestrator, and an offline M3 latency-data and model pipeline.
 
-## Architecture
+The orchestrator supports `edge-only`, `cloud-only`, and `alternate` routing. M3 latency prediction is not integrated into dispatch, and adaptive M4 logic is not implemented. Risk prediction is a separate workstream maintained by Huan.
 
-```text
-┌────────────────────────────────────┐              ┌────────────────────────────────────┐
-│ EDGE VM: 192.168.56.10              │              │ CLOUD VM: 192.168.56.11             │
-│                                    │              │                                    │
-│ M5-edge service :8001              │              │ M5-cloud service :8002             │
-│ M2-edge state  :8004 ──────────────┼─ telemetry ─►│ M2-cloud telemetry :8003           │
-│             ▲                      │              │                                    │
-│ orchestrator ├──── /predict ────────┼─────────────►│ M5-cloud                           │
-│              └──── /predict ──────►│ M5-edge      │                                    │
-└────────────────────────────────────┘              └────────────────────────────────────┘
-```
-
-M2 obtains M5 metrics and does not consume detector prediction responses. The `q_e` and `q_c` state values are active-request counts from M5's `requests_in_flight` metrics. They are labeled as proxies for waiting-queue occupancy because M5 does not expose a separate waiting queue length.
-
-## Folder layout
+## Repository layout
 
 ```text
-.
+PRO-IDS/
+├── README.md
 ├── config.yaml
 ├── requirements.txt
-├── request_source.py
-├── logging_utils.py
-├── orchestrator.py
-├── npz_model.py
-├── M2/
-│   ├── m2_state.py
-│   ├── m2_cloud_telemetry.py
-│   └── m2_edge_telemetry.py
-├── M5/
-│   ├── m5_edge_service.py
-│   └── m5_cloud_service.py
-├── models/
-│   ├── AD1_int5.npz
-│   └── AD1_model.joblib
-├── benchmark/
+├── src/
+│   └── pro_ids/
+│       ├── orchestrator.py
+│       ├── common/logging_utils.py
+│       ├── m1/request_source.py
+│       ├── m2/
+│       │   ├── state.py
+│       │   ├── cloud_telemetry.py
+│       │   └── edge_telemetry.py
+│       ├── m3/
+│       │   ├── latency/{collect,train,predictor}.py
+│       │   └── risk/train_risk_predictor.py  # Huan's separate workstream
+│       └── m5/
+│           ├── npz_model.py
+│           ├── edge_service.py
+│           └── cloud_service.py
+├── experiments/run_e2_matrix.sh
+├── benchmarks/
 │   ├── benchmark_npz.py
-│   ├── benchmark_sklearn.py
-│   └── test_npz_model.py
-├── data/
-└── results/
+│   └── benchmark_sklearn.py
+├── models/
+│   ├── detector/
+│   ├── latency/
+│   │   ├── blocked/
+│   │   └── random/
+│   └── risk/                          # Huan's separate artifacts
+├── artifacts/latency/                 # generated collector output
+├── data/                              # local datasets; ignored by Git
+├── results/                           # generated run logs; ignored by Git
+└── scripts/risk/                      # Huan's inspection utilities
 ```
 
-## Prerequisites and installation
+The collection metadata, training metadata, calibration, and evaluation report for each latency-model cohort are kept beside that cohort's model files. Keep these files together when copying or archiving a model cohort.
 
-- Two Ubuntu VMs on a host-only network; this guide assumes edge `192.168.56.10` and cloud `192.168.56.11`.
-- Python 3.10 or newer on both VMs.
-- Copy the testbed files and model assets to both VMs. The edge VM needs `models/AD1_int5.npz` and `npz_model.py`; the cloud VM needs `models/AD1_model.joblib`.
-- Allow the edge VM to reach cloud ports 8002 and 8003.
-- Put the dataset CSV on the edge VM when using CSV input. Config paths resolve relative to `config.yaml`.
+## Install and configure
 
-Install dependencies once from the project root on each VM:
+Use Python 3.10 or newer. Install dependencies once from the repository root:
 
 ```bash
 python3 -m pip install -r requirements.txt
 ```
 
-## Start services
+Run commands from the repository root. Python modules are loaded from `src` using `PYTHONPATH=src`. Paths in `config.yaml` are resolved relative to the configuration file. The default service ports are:
 
-Start each service in a separate terminal, in this order:
+| Service | Bind address | Port |
+|---|---|---:|
+| M5 edge | edge VM, localhost | 8001 |
+| M5 cloud | cloud VM, all interfaces | 8002 |
+| M2 cloud telemetry | cloud VM, all interfaces | 8003 |
+| M2 edge state | edge VM, localhost | 8004 |
 
-1. On the cloud VM, start M5-cloud:
+Set `cloud.advertised_host` to the address the edge VM uses to reach the cloud. The current E2 network uses edge `192.168.9.10` and cloud `192.168.9.11`; update the config and experiment script if your VM network differs.
 
-   ```bash
-   python3 M5/m5_cloud_service.py --config config.yaml
-   ```
+## Start services and run a baseline
 
-2. On the cloud VM, start M2-cloud:
+Start the services in this order. Open a terminal for each long-running service.
 
-   ```bash
-   python3 M2/m2_cloud_telemetry.py --config config.yaml
-   ```
-
-3. On the edge VM, start M5-edge:
-
-   ```bash
-   python3 M5/m5_edge_service.py --config config.yaml
-   ```
-
-4. On the edge VM, start M2-edge:
-
-   ```bash
-   python3 M2/m2_edge_telemetry.py --config config.yaml
-   ```
-
-5. On the edge VM, run the orchestrator after the four services are healthy:
-
-   ```bash
-   python3 orchestrator.py --config config.yaml --input-csv data/CICIDS2017_test.csv \
-     --num-requests 1000 --policy edge-only --label run1
-   ```
-
-Omit `--input-csv` for deterministic synthetic input, intended for plumbing checks only. The orchestrator warns and continues if M2-edge is unavailable; those runs have null state snapshots and should not be used for state-aware analysis.
-
-Shut down in reverse order: orchestrator, M2-edge, M5-edge, M2-cloud, M5-cloud. Restart the M5 and M2 services between policy runs when independent queue/counter state is required; service counters persist for the lifetime of each service process.
-
-## Routing policies
-
-- `edge-only`: every request goes to M5-edge.
-- `cloud-only`: every request goes to M5-cloud.
-- `alternate`: even-index requests go to edge; odd-index requests go to cloud.
-
-Routing is hardcoded and does not use M2 state.
-
-## Outputs
-
-- `results/<run_id>.jsonl`: one record per request. Run IDs include a timestamp and random suffix to avoid collisions between rapid runs with the same label and policy.
-- `results/summary_runs.csv`: appended run summaries.
-- `results/m2_edge_*.jsonl` and `results/m2_cloud_*.jsonl`: telemetry samples.
-
-Per-request records include request identity, route/status, local latency components, predictions and labels, error details, and the pre-dispatch `s_t_snapshot` where M2-edge is available.
-
-## Smoke checks
-
-After starting all four services, check health and the M2 state endpoints from the edge VM:
+On the cloud VM, start each service in its own terminal.
 
 ```bash
-curl http://127.0.0.1:8001/health
-curl http://192.168.56.11:8002/health
-curl http://127.0.0.1:8004/health
-curl http://192.168.56.11:8003/telemetry
-curl http://127.0.0.1:8004/state
+PYTHONPATH=src python3 -m pro_ids.m5.cloud_service --config config.yaml
 ```
 
-Run a dry run, then a short edge-only and cloud-only inference run:
+In a second cloud terminal:
 
 ```bash
-python3 orchestrator.py --config config.yaml --num-requests 2 --dry-run --label smoke-dry
-python3 orchestrator.py --config config.yaml --num-requests 20 --policy edge-only --label smoke-edge
-python3 orchestrator.py --config config.yaml --num-requests 20 --policy cloud-only --label smoke-cloud
+PYTHONPATH=src python3 -m pro_ids.m2.cloud_telemetry --config config.yaml
 ```
 
-Expected results: health endpoints return `status: ok`; state and telemetry endpoints return JSON snapshots after their first sample; the dry run writes `dry_run` records without calling `/predict`; both inference runs write 20 request records and one summary row with the selected policy.
+On the edge VM, start each service in its own terminal.
 
-## Not implemented in Phase B
+```bash
+PYTHONPATH=src python3 -m pro_ids.m5.edge_service --config config.yaml
+```
 
-- M3 risk and latency predictors.
-- Adaptive M4 decisions.
-- Deadline enforcement and explicit waiting-queue limits.
-- `netem`, `tcpreplay`, or load generation.
-- M3 predictor maybe more weight and taking longer time to run than detector?
+In a second edge terminal:
+
+```bash
+PYTHONPATH=src python3 -m pro_ids.m2.edge_telemetry --config config.yaml
+```
+
+After all four services are healthy, run a baseline from the edge VM:
+
+```bash
+PYTHONPATH=src python3 -m pro_ids.orchestrator \
+  --config config.yaml \
+  --input-csv data/CICIDS2017v2_test.csv \
+  --policy edge-only --num-requests 20 --label e2-edge
+```
+
+Use `--policy cloud-only` for the cloud baseline, or `--policy alternate` to alternate routes. Omit `--input-csv` to use deterministic synthetic inputs for a plumbing check. The input CSV should contain 77 numeric features; a `Label` or `Labels` column is used as the ground-truth label if present. Large CSV files are excluded from Git and must be copied into `data/` on each host that needs them.
+
+For a dry run that checks orchestrator startup and logging without issuing detector predictions:
+
+```bash
+PYTHONPATH=src python3 -m pro_ids.orchestrator \
+  --config config.yaml --num-requests 20 --dry-run --label smoke
+```
+
+Stop services in reverse order. Restart M5 and M2 services between independent policy runs when you need fresh counters and telemetry averages; these are reset when their services restart.
+
+## E2 network-condition experiment
+
+`experiments/run_e2_matrix.sh` runs the configured policy matrix and applies network perturbations with Linux traffic-control tools. Run it from the repository root on the edge VM after starting the services:
+
+```bash
+bash experiments/run_e2_matrix.sh
+```
+
+The script expects the configured CSV, `.venv` environment, `tc`, and network-shaping privileges (typically `sudo`). It writes run logs under `results/`.
+
+## M2 state interpretation
+
+M2 exposes `GET /state` on the edge and `GET /telemetry` on the cloud. It samples resource use, M5 request counters, orchestrator notifications, and cloud telemetry, then writes timestamped JSONL logs under `results/`.
+
+**Queue values are proxies.** `q_e` and `q_c` come from the M5 services' `requests_in_flight` counts. Those counts represent active requests being handled, not requests waiting in an inference queue. The `q_c_is_proxy` and cloud telemetry `is_proxy` fields identify the cloud value as a proxy. Interpret both values as proxies in analysis.
+
+`mu_e_hat` and the cloud-side `mu_c_hat` are estimated from deltas in M5 `requests_completed` over elapsed time. The edge applies a second EMA to the cloud's `mu_c_hat` to smooth polling-channel jitter. When cloud polling fails, the edge retains the last-known values and `h_c_ms` grows from the last successful poll.
+
+## Offline M3 latency-model workflow
+
+Each orchestrator run creates `results/<run_id>.jsonl` and appends a row to `results/summary_runs.csv`. JSONL records include timings, route and outcome, labels and predictions when available, the pre-dispatch `s_t_snapshot`, and the 77 input `features` used by the latency-data collector. Timings use the edge orchestrator's clock. Timed-out and failed requests are logged and included in drop counts; latency summaries cover successful requests.
+
+Collect data and train models from E2 JSONL runs:
+
+```bash
+PYTHONPATH=src python3 -m pro_ids.m3.latency.collect \
+  --results-dir results \
+  --output-dir artifacts/latency/blocked \
+  --edge-split blocked --cloud-split blocked
+
+PYTHONPATH=src python3 -m pro_ids.m3.latency.train \
+  --artifacts-dir artifacts/latency/blocked \
+  --output-dir models/latency/blocked
+```
+
+The collector also supports random splits, and a `by_run` split for cloud data. Choose split modes to match the evaluation design. The checked-in `models/latency/blocked` and `models/latency/random` directories contain trained models and their metadata. Run the predictor's self-check with:
+
+```bash
+PYTHONPATH=src python3 -m pro_ids.m3.latency.predictor models/latency/blocked
+```
+
+The latency predictor currently runs offline and is not called by the orchestrator. Adaptive M3/M4 dispatch, deadline enforcement, and queue limits remain unimplemented. Risk prediction remains Huan's separate workstream.
+
+## Detector models and benchmarks
+
+M5 edge loads `models/detector/AD1v2_int7.npz`; M5 cloud loads `models/detector/AD1v2_model.joblib`. Both services expose `/health`, `/metrics`, and `/predict` with matching response fields.
+
+The `benchmarks/` directory contains local model benchmark programs:
+
+```bash
+python3 benchmarks/benchmark_npz.py --help
+python3 benchmarks/benchmark_sklearn.py --help
+```
+
+Generated benchmark reports should be stored under `results/` or another output directory, not alongside source files.

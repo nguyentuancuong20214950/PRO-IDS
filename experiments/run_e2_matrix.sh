@@ -57,7 +57,7 @@ run_orchestrator() {
     t0=$(date +%s)
     log "Running: n=$n | policy=$policy | label=$label"
     set +e
-    python3 orchestrator.py --config config.yaml \
+    PYTHONPATH=src python3 -m pro_ids.orchestrator --config config.yaml \
         --input-csv "$DATA_CSV" \
         --num-requests "$n" --policy "$policy" --label "$label" \
         > /tmp/orch_${label}.log 2>&1

@@ -24,8 +24,8 @@ average rate over the gap, not a spike). A counter that goes backwards (M5-cloud
 restart) re-baselines instead of producing a negative rate.
 
 Smoke test 1 (cloud VM):
-    cd testbed
-    python3 m2_cloud_telemetry.py --config config.yaml
+    cd PRO-IDS
+    PYTHONPATH=src python3 -m pro_ids.m2.cloud_telemetry --config config.yaml
     curl -s http://127.0.0.1:8003/health    | python3 -m json.tool
     curl -s http://127.0.0.1:8003/telemetry | python3 -m json.tool
   Expect q_c / u_c / mu_c_hat / timestamp_utc. With M5-cloud stopped: q_c = null,
@@ -47,7 +47,7 @@ import yaml
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from m2_state import EMA, RateLimitedWarner, append_jsonl, iso_now, require_keys, utc_stamp
+from .state import EMA, RateLimitedWarner, append_jsonl, iso_now, require_keys, utc_stamp
 
 SERVICE = "m2_cloud"
 REQUIRED_KEYS = [
