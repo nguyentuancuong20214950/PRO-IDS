@@ -1,0 +1,40 @@
+{
+  "p": 0.95,
+  "artifacts_dir": "M3/artifacts_blocked",
+  "edge": {
+    "balanced_no_ui": {
+      "eta_ms": 0.10062778830778907,
+      "n_cal": 2250
+    },
+    "balanced_with_ui": {
+      "eta_ms": 0.054977664584368036,
+      "n_cal": 2250
+    },
+    "precise_no_ui": {
+      "eta_ms": 0.22313668887964067,
+      "n_cal": 2250
+    },
+    "precise_with_ui": {
+      "eta_ms": 0.18022746305092063,
+      "n_cal": 2250
+    }
+  },
+  "cloud": {
+    "balanced_no_ui": {
+      "eta_ms": 0.0,
+      "n_cal": 5250
+    },
+    "balanced_with_ui": {
+      "eta_ms": 0.06570260087261204,
+      "n_cal": 5250
+    },
+    "precise_no_ui": {
+      "eta_ms": 0.3159386757152447,
+      "n_cal": 5250
+    },
+    "precise_with_ui": {
+      "eta_ms": 0.43586627731703054,
+      "n_cal": 5250
+    }
+  }
+}

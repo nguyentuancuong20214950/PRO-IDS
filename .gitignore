@@ -4,26 +4,22 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
-.pytest_cache/
 
-# Runtime output (regenerated on VMs)
+# Runtime output (regenerated per E2 run)
 results/
+results_backup_*/
+/tmp/orch_*.log
 *.jsonl
-summary_runs.csv
 
-# Data (large CSVs — copy via scp instead)
+# M3 artifacts (.npz — regenerable from JSONL via collect_latency_data.py)
+M3/artifacts_blocked/
+M3/artifacts_random/
+
+# Data (large CSV — copy via scp instead)
 data/*.csv
-!data/.gitkeep
-
-# Logs
-*.log
 
 # OS / IDE
 .DS_Store
-Thumbs.db
 .vscode/
 .idea/
 *.swp
-
-# Jupyter
-.ipynb_checkpoints/

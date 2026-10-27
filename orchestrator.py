@@ -293,6 +293,7 @@ def main() -> int:
                     m2_state_null_count += 1
                     state = None
                 latency_m2_read_ms = (time.perf_counter() - t0_m2) * 1000.0
+                features_list = features.tolist()
 
                 if policy == "edge-only":
                     route = "edge"
@@ -316,6 +317,7 @@ def main() -> int:
                         "true_label": true_label,
                         "service_latency_ms": None,
                         "error_msg": None,
+			"features": features_list,
                         "s_t_snapshot": state,
                     })
                 else:
@@ -337,7 +339,6 @@ def main() -> int:
                     bytes_received = 0
 
                     try:
-                        features_list = features.tolist()
                         if route == "edge":
                             url = f"{edge_base}/predict"
                             timeout = 5.0
@@ -444,6 +445,7 @@ def main() -> int:
                         "true_label": true_label,
                         "service_latency_ms": service_latency_ms,
                         "error_msg": error_msg,
+                        "features": features_list,
                         "s_t_snapshot": state,
                     })
 

@@ -1,0 +1,40 @@
+{
+  "p": 0.95,
+  "artifacts_dir": "M3/artifacts_random",
+  "edge": {
+    "balanced_no_ui": {
+      "eta_ms": 0.08215770560500069,
+      "n_cal": 2250
+    },
+    "balanced_with_ui": {
+      "eta_ms": 0.11720033753777415,
+      "n_cal": 2250
+    },
+    "precise_no_ui": {
+      "eta_ms": 0.19666813839120145,
+      "n_cal": 2250
+    },
+    "precise_with_ui": {
+      "eta_ms": 0.160609350085676,
+      "n_cal": 2250
+    }
+  },
+  "cloud": {
+    "balanced_no_ui": {
+      "eta_ms": 0.11954658747167457,
+      "n_cal": 5250
+    },
+    "balanced_with_ui": {
+      "eta_ms": 0.19458786509766668,
+      "n_cal": 5250
+    },
+    "precise_no_ui": {
+      "eta_ms": 0.3170662730103686,
+      "n_cal": 5250
+    },
+    "precise_with_ui": {
+      "eta_ms": 0.6819600828956514,
+      "n_cal": 5250
+    }
+  }
+}
